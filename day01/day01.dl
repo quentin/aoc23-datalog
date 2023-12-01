@@ -1,0 +1,69 @@
+.include "puzzle.dl"
+
+.init day01 = _day01
+.comp _day01 : puzzle {
+
+.decl calibration(line:symbol)
+.input calibration(filename="input")
+
+/// Holds if `line` has a `digit` at position `pos`.
+.decl calibration_digit(line:symbol, pos:number, digit:number)
+calibration_digit(line, pos, digit) :-
+  calibration(line),
+  pos = range(0, strlen(line)),
+  c = substr(line, pos, 1),
+  ( c = "0"
+  ; c = "1"
+  ; c = "2"
+  ; c = "3"
+  ; c = "4"
+  ; c = "5"
+  ; c = "6"
+  ; c = "7"
+  ; c = "8"
+  ; c = "9"
+  ),
+  digit = to_number(c).
+
+/// Holds if the calibration value at `line` is `value`.
+.decl calibration_value(line:symbol, value:number)
+calibration_value(line, 10*d1+d2) :-
+  calibration(line),
+  _pmin = min p : calibration_digit(line, p, d1),
+  _pmax = max p : calibration_digit(line, p, d2).
+
+part1.answer(value) :-
+  value = sum v : calibration_value(_, v).
+
+/// Holds if `line` has a `digit` at position `pos`.
+.decl fixed_calibration_digit(line:symbol, pos:number, digit:number)
+
+fixed_calibration_digit(line, pos, digit) :-
+  calibration_digit(line, pos, digit).
+
+fixed_calibration_digit(line, pos, digit) :-
+  calibration(line),
+  pos = range(0, strlen(line)),
+  substr(line, pos, strlen(word)) = word,
+  ( word = "one", digit = 1
+  ; word = "two", digit = 2
+  ; word = "three", digit = 3
+  ; word = "four", digit = 4
+  ; word = "five", digit = 5
+  ; word = "six", digit = 6
+  ; word = "seven", digit = 7
+  ; word = "eight", digit = 8
+  ; word = "nine", digit = 9
+  ).
+
+/// Holds if the calibration value at `line` is `value`.
+.decl fixed_calibration_value(line:symbol, value:number)
+fixed_calibration_value(line, 10*d1+d2) :-
+  calibration(line),
+  _pmin = min p : fixed_calibration_digit(line, p, d1),
+  _pmax = max p : fixed_calibration_digit(line, p, d2).
+
+part2.answer(value) :-
+  value = sum v : fixed_calibration_value(_, v).
+
+}

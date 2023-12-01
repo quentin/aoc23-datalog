@@ -1,0 +1,12 @@
+.once
+
+.comp puzzle {
+  .init part1 = _part
+  .init part2 = _part
+
+  .comp _part {
+    /// Holds if the answer is `value`.
+    .decl answer(value:number)
+    .output answer()
+  }
+}
