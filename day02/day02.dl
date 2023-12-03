@@ -1,0 +1,49 @@
+.include "puzzle.dl"
+
+.init day02 = _day02
+.comp _day02 : puzzle {
+
+.type Game <: number
+.type Hand <: number
+.type Color <: symbol
+
+.decl games(game:Game, hand:Hand, cnt:number, color:Color)
+.input games(filename="games.facts", delimiter=" ")
+
+/// Holds if `game` is impossible.
+.decl impossible_game(game:Game)
+impossible_game(game) :-
+  games(game, _, cnt, color),
+  ( color = "red", cnt > 12
+  ; color = "green", cnt > 13
+  ; color = "blue", cnt > 14
+  ).
+
+/// Holds if `game` is possible.
+.decl possible_game(game:Game)
+possible_game(game) :-
+  games(game, _, _, _),
+  !impossible_game(game).
+
+part1.answer(value) :-
+  value = sum game : possible_game(game).
+
+/// Holds if a maximum number `maxcnt` of `color` cubes has
+/// been observed in `game`.
+.decl maximum_count(game:Game, color:Color, maxcnt:number)
+maximum_count(game, color, maxcnt) :-
+  games(game, _, _, color),
+  maxcnt = max cnt : games(game, _, cnt, color).
+.output maximum_count()
+
+.decl game_power(game:Game, power:number)
+game_power(game, power) :-
+  maximum_count(game, "red", r),
+  maximum_count(game, "green", g),
+  maximum_count(game, "blue", b),
+  power = r * g * b.
+
+part2.answer(value) :-
+  value = sum power : game_power(_, power).
+
+}
