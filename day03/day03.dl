@@ -1,0 +1,124 @@
+.include "puzzle.dl"
+
+.init day03 = _day03
+.comp _day03 : puzzle {
+
+  .type Line <: number
+  .type Column <: number
+
+  .decl schematic(line:Line, text:symbol)
+  .input schematic(filename="schematic.facts", delimiter=" ")
+
+  /// Holds if there is a symbol at `line:column` in the schematic.
+  .decl symbol_at(line:Line, column:Column, sym:symbol)
+  symbol_at(line, col, s) :-
+    schematic(line, text),
+    col = range(0, strlen(text)),
+    s = substr(text, col, 1),
+    match("[^.0-9]", s).
+
+  /// Holds if there is digit `digit` at `line:column` in the schematic.
+  .decl digit_at(line:Line, column:Column, digit:number)
+  digit_at(line, col, digit) :-
+    schematic(line, text),
+    col = range(0, strlen(text)),
+    c = substr(text, col, 1),
+    match("[0-9]", c),
+    digit = to_number(c).
+
+  /// Holds if there is a number at position `line:column` in the schematic,
+  /// and the `pos`-th digit is `digit`.
+  .decl number_at(line:Line, column:Column, pos:number, digit:number)
+  number_at(line, col, 0, digit) :-
+    digit_at(line, col, digit),
+    !digit_at(line, col-1, _).
+  number_at(line, col, pos+1, digit) :-
+    number_at(line, col, pos, _),
+    digit_at(line, col+pos+1, digit).
+
+  /// Holds if there is a part number at `line:column` in the schematic.
+  .decl part_number_at(line:Line, column:Column)
+  part_number_at(num_line, num_col) :-
+    number_at(num_line, num_col, pos, _),
+    digit_col = num_col + pos,
+    digit_line = num_line,
+    symbol_at(sym_line, sym_col, _),
+    // symbol - digit proximity
+    ( sym_line = digit_line, sym_col = digit_col + 1
+    ; sym_line = digit_line, sym_col = digit_col - 1
+    ; sym_line = digit_line + 1, sym_col = digit_col
+    ; sym_line = digit_line + 1, sym_col = digit_col + 1
+    ; sym_line = digit_line + 1, sym_col = digit_col - 1
+    ; sym_line = digit_line - 1, sym_col = digit_col
+    ; sym_line = digit_line - 1, sym_col = digit_col + 1
+    ; sym_line = digit_line - 1, sym_col = digit_col - 1
+    ).
+
+  /// Holds if the part number at `line:column` is `digits`-digits long.
+  .decl part_number_len(line:Line, column:Column, digits:number)
+  part_number_len(line, column, digits) :-
+    part_number_at(line, column),
+    digits = 1 + max pos : number_at(line, column, pos, _).
+
+  /// Holds if the `pos`-th decimal value of part number at `line:column` is `dec`.
+  .decl part_number_decimal(line:Line, column:Column, pos:number, dec:number)
+  part_number_decimal(line, column, pos, dec) :-
+    part_number_at(line, column),
+    part_number_len(line, column, len),
+    number_at(line, column, pos, v),
+    rank = len-pos-1,
+    ( rank = 0, p = 1
+    ; rank = 1, p = 10
+    ; rank = 2, p = 100
+    ; rank = 3, p = 1000
+    ; rank = 4, p = 10000
+    ),
+    dec = v * p.
+
+  /// Holds if the value of part number at `line:column` is `value`.
+  .decl part_number_value(line:Line, column:Column, value:number)
+  part_number_value(line, column, value) :-
+    part_number_at(line, column),
+    value = sum dec : part_number_decimal(line, column, _, dec).
+
+  part1.answer(value) :-
+    value = sum v : part_number_value(_, _, v).
+
+  /// Holds if part-number at `pn_line:pn_column` is adjacent to a "*" symbol
+  /// at `sym_line:sym_column` and the part-number value is `value`.
+  .decl adjacent_part_number(sym_line:Line, sym_column:Column, pn_line:Line, pn_column:Column, pn_value:number)
+  adjacent_part_number(sym_line, sym_col, pnl, pnc, pnv) :-
+    symbol_at(sym_line, sym_col, "*"),
+    part_number_value(pnl, pnc, pnv),
+    number_at(pnl, pnc, pos, _),
+    digit_col = pnc + pos,
+    digit_line = pnl,
+    // symbol - digit proximity
+    ( sym_line = digit_line, sym_col = digit_col + 1
+    ; sym_line = digit_line, sym_col = digit_col - 1
+    ; sym_line = digit_line + 1, sym_col = digit_col
+    ; sym_line = digit_line + 1, sym_col = digit_col + 1
+    ; sym_line = digit_line + 1, sym_col = digit_col - 1
+    ; sym_line = digit_line - 1, sym_col = digit_col
+    ; sym_line = digit_line - 1, sym_col = digit_col + 1
+    ; sym_line = digit_line - 1, sym_col = digit_col - 1
+    ).
+
+  /// Holds if there is a gear at `gear_line:gear_column`.
+  .decl gear_at(gear_line:Line, gear_column:Column)
+  gear_at(gl, gc) :-
+    symbol_at(gl, gc, "*"),
+    2 = count : {adjacent_part_number(gl, gc, _, _, _)}.
+
+  /// Holds if the gear at `gear_line:gear_column` has ratio `ratio`.
+  .decl gear_ratio(gear_line:Line, gear_column:Column, ratio:number)
+  gear_ratio(gl, gc, ratio) :-
+    gear_at(gl, gc),
+    adjacent_part_number(gl, gc, pnl1, pnc1, pnv1),
+    adjacent_part_number(gl, gc, pnl2, pnc2, pnv2),
+    !(pnl1 = pnl2, pnc1 = pnc2),
+    ratio = pnv1 * pnv2.
+
+  part2.answer(value) :-
+    value = sum ratio : gear_ratio(_, _, ratio).
+}
