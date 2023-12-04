@@ -1,5 +1,8 @@
 .once
 
+/// best atom ordering heuristic
+.pragma "RamSIPS" "delta-max-bound"
+
 .comp puzzle {
   .init part1 = _part
   .init part2 = _part
