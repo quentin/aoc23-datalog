@@ -1,0 +1,93 @@
+.include "puzzle.dl"
+
+.init day04 = _day04
+.comp _day04 : puzzle {
+  /// raw input lines
+  .decl raw_card(line:symbol)
+  .input raw_card(filename="input", delimiter=";")
+
+  .type Col <: number
+  .type Card <: number
+
+  .decl digit(line:symbol, pos:Col, value:number)
+  digit(line, pos, value) :-
+    raw_card(line),
+    pos = range(0, strlen(line)),
+    c = substr(line, pos, 1),
+    match("[0-9]", c),
+    value = to_number(c).
+
+  /// Holds if in `line` there is a number ending at column `end` of length
+  /// `len` and value `value`.
+  .decl num(line:symbol, end:Col, len:number, value:number)
+  /// we construct numbers from right to left.
+  /// start with rightmost least-significant digit.
+  num(line, end, 1, value) :-
+    digit(line, end, value),
+    !digit(line, end+1, _).
+  /// grow number to the left to a more significant digit.
+  num(line, end, len+1, d*pow10 + value) :-
+    num(line, end, len, value),
+    digit(line, end-len, d),
+    ( len = 1, pow10 = 10
+    ; len = 2, pow10 = 100
+    ).
+  /// keep the number with the highest length ending at `end`.
+  num(line, end, l1, _) <= num(line, end, l2, _) :-
+    l1 <= l2.
+
+  /// Holds if `line` contains the card number `card`.
+  .decl is_card(card:Card, line:symbol)
+  is_card(as(card,Card), line) :-
+    num(line, 7, _, card).
+
+  /// Holds if the card number `card` contains the winning number `value`.
+  .decl card_winning_number(card:Card, value:number)
+  card_winning_number(card, value) :-
+    is_card(card, line),
+    num(line, end, _, value),
+    end > 7,
+    end <= 38.
+
+  /// Holds if the card number `card` contains the played number `value`.
+  .decl card_played_number(card:Card, value:number)
+  card_played_number(as(card,Card), value) :-
+    is_card(card, line),
+    num(line, end, _, value),
+    end > 38.
+
+  /// Holds if the card `card` has `matches` played numbers matching winning numbers,
+  /// with `matches > 0`.
+  .decl card_matches(card:Card, matches:number)
+  card_matches(card, matches) :-
+    is_card(card, _),
+    matches = count : { card_winning_number(card, value), card_played_number(card, value) },
+    matches > 0.
+
+  /// Holds if the score of `card` is `score`.
+  .decl card_score(card:Card, score:number)
+  card_score(card, score) :-
+    card_matches(card, matches),
+    score = 1 bshl (matches-1).
+
+  part1.answer(value) :-
+    value = sum score : card_score(_, score).
+
+  /// Trace of the copies
+  .type Trace = [head:Card, tail:Trace]
+
+  /// Holds if we won a copy of `card` from that `trace`.
+  .decl copies(trace:Trace, card:Card)
+  /// bootstrap with card 1 and an empty trace
+  copies(nil, card) :-
+    is_card(card, _).
+  /// get copies
+  copies([card, trace], card+i) :-
+    copies(trace, card),
+    card_matches(card, matches),
+    i = range(1, matches+1),
+    is_card(card + i, _).
+
+  part2.answer(value) :-
+    value = count : copies(_,_).
+}
